@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>待办事项 - Railway部署示例</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            animation: slideIn 0.5s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #999;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .input-group {
+            display: flex;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: box-shadow 0.3s;
+        }
+        
+        .input-group:hover {
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        #todoInput {
+            flex: 1;
+            padding: 15px 20px;
+            border: none;
+            font-size: 16px;
+            outline: none;
+            background: #f8f9fa;
+        }
+        
+        #todoInput::placeholder {
+            color: #aaa;
+        }
+        
+        #addBtn {
+            padding: 15px 35px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+            letter-spacing: 0.5px;
+        }
+        
+        #addBtn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        #addBtn:active {
+            transform: scale(0.98);
+        }
+        
+        .todo-list {
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        
+        .todo-list::-webkit-scrollbar {
+            width: 5px;
+        }
+        
+        .todo-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .todo-list::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        
+        .todo-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            margin-bottom: 12px;
+            border-radius: 12px;
+            transition: all 0.3s;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .todo-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            background: #fff;
+        }
+        
+        .todo-item.completed {
+            opacity: 0.7;
+            background: #e9ecef;
+        }
+        
+        .todo-item.completed .todo-text {
+            text-decoration: line-through;
+            color: #999;
+        }
+        
+        .checkbox {
+            width: 22px;
+            height: 22px;
+            margin-right: 15px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+        
+        .todo-text {
+            flex: 1;
+            font-size: 16px;
+            color: #333;
+            word-break: break-all;
+        }
+        
+        .todo-time {
+            font-size: 12px;
+            color: #999;
+            margin: 0 15px;
+        }
+        
+        .delete-btn {
+            padding: 8px 16px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        
+        .delete-btn:hover {
+            background: #ff5252;
+            transform: scale(1.05);
+        }
+        
+        .stats {
+            margin-top: 25px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-around;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-label {
+            color: #999;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stat-value {
+            color: #333;
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(3, end) infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+        
+        .error {
+            background: #ffe0e0;
+            color: #d00;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #d00;
+        }
+        
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #999;
+            font-size: 12px;
+        }
+        
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 待办事项</h1>
+        <div class="subtitle">Powered by Railway & MongoDB</div>
+        
+        <div class="input-group">
+            <input type="text" id="todoInput" placeholder="添加新的待办事项，按Enter或点击添加..." maxlength="100">
+            <button id="addBtn">添加</button>
+        </div>
+        
+        <div id="todoList" class="todo-list loading">加载中</div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-label">总计</div>
+                <div class="stat-value" id="totalCount">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">已完成</div>
+                <div class="stat-value" id="completedCount">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">待完成</div>
+                <div class="stat-value" id="pendingCount">0</div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            Made with ❤️ | 部署在 <a href="https://railway.app" target="_blank">Railway</a>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api/todos';
+        let todos = [];
+
+        // 格式化时间
+        function formatTime(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = now - date;
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+            
+            if (days > 0) return `${days}天前`;
+            if (hours > 0) return `${hours}小时前`;
+            if (minutes > 0) return `${minutes}分钟前`;
+            return '刚刚';
+        }
+
+        // 加载待办事项
+        async function loadTodos() {
+            try {
+                const response = await fetch(API_URL);
+                const result = await response.json();
+                
+                if (result.success) {
+                    todos = result.data;
+                    renderTodos();
+                } else {
+                    throw new Error(result.error || '加载失败');
+                }
+            } catch (error) {
+                console.error('加载失败:', error);
+                document.getElementById('todoList').innerHTML = 
+                    '<div class="error">😕 加载失败，请刷新页面重试</div>';
+            }
+        }
+
+        // 渲染待办事项
+        function renderTodos() {
+            const todoList = document.getElementById('todoList');
+            
+            if (todos.length === 0) {
+                todoList.innerHTML = `
+                    <div class="empty">
+                        <div class="empty-icon">📋</div>
+                        <p>暂无待办事项</p>
+                        <p style="font-size: 12px; margin-top: 10px;">添加你的第一个待办事项吧！</p>
+                    </div>
+                `;
+            } else {
+                todoList.innerHTML = todos.map(todo => `
+                    <div class="todo-item ${todo.completed ? 'completed' : ''}" data-id="${todo._id}">
+                        <input type="checkbox" 
+                               class="checkbox" 
+                               ${todo.completed ? 'checked' : ''}
+                               onchange="toggleTodo('${todo._id}', ${!todo.completed})">
+                        <span class="todo-text">${escapeHtml(todo.title)}</span>
+                        <span class="todo-time">${formatTime(todo.createdAt)}</span>
+                        <button class="delete-btn" onclick="deleteTodo('${todo._id}')">删除</button>
+                    </div>
+                `).join('');
+            }
+            
+            updateStats();
+        }
+
+        // HTML转义
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        // 添加待办事项
+        async function addTodo() {
+            const input = document.getElementById('todoInput');
+            const title = input.value.trim();
+            
+            if (!title) {
+                input.focus();
+                return;
+            }
+            
+            // 禁用输入框和按钮
+            input.disabled = true;
+            document.getElementById('addBtn').disabled = true;
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    todos.unshift(result.data);
+                    renderTodos();
+                    input.value = '';
+                } else {
+                    throw new Error(result.error || '添加失败');
+                }
+            } catch (error) {
+                alert('添加失败：' + error.message);
+            } finally {
+                // 重新启用输入框和按钮
+                input.disabled = false;
+                document.getElementById('addBtn').disabled = false;
+                input.focus();
+            }
+        }
+
+        // 切换完成状态
+        async function toggleTodo(id, completed) {
+            try {
+                const response = await fetch(`${API_URL}/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ completed })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const index = todos.findIndex(t => t._id === id);
+                    if (index !== -1) {
+                        todos[index] = result.data;
+                        renderTodos();
+                    }
+                } else {
+                    throw new Error(result.error || '更新失败');
+                }
+            } catch (error) {
+                alert('更新失败：' + error.message);
+                loadTodos(); // 重新加载
+            }
+        }
+
+        // 删除待办事项
+        async function deleteTodo(id) {
+            if (!confirm('确定要删除这个待办事项吗？')) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // 添加删除动画
+                    const item = document.querySelector(`[data-id="${id}"]`);
+                    if (item) {
+                        item.style.animation = 'fadeOut 0.3s ease';
+                        setTimeout(() => {
+                            todos = todos.filter(t => t._id !== id);
+                            renderTodos();
+                        }, 300);
+                    }
+                } else {
+                    throw new Error(result.error || '删除失败');
+                }
+            } catch (error) {
+                alert('删除失败：' + error.message);
+            }
+        }
+
+        // 更新统计
+        function updateStats() {
+            const total = todos.length;
+            const completed = todos.filter(t => t.completed).length;
+            const pending = total - completed;
+            
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('completedCount').textContent = completed;
+            document.getElementById('pendingCount').textContent = pending;
+        }
+
+        // 事件监听
+        document.getElementById('addBtn').addEventListener('click', addTodo);
+        document.getElementById('todoInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                addTodo();
+            }
+        });
+
+        // 添加删除动画
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeOut {
+                from {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+                to {
+                    opacity: 0;
+                    transform: translateX(-100%);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // 初始加载
+        loadTodos();
+        
+        // 每30秒自动刷新
+        setInterval(loadTodos, 30000);
+        
+        // 页面加载完成提示
+        console.log('✅ 待办事项应用已加载');
+        console.log('🚀 部署在 Railway 平台');
+    </script>
+</body>
+</html>
