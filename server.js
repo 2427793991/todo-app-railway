@@ -1,4 +1,4 @@
-// 在文件顶部添加所有必需的导入
+// 在文件顶部
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -7,92 +7,52 @@ require('dotenv').config();
 
 const app = express();
 
-// 中间件配置 ✅ (位置正确)
+// 中间件
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));  // 👈 添加这行以支持表单提交
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
-// MongoDB 连接配置 ✅ (代码正确)
+// MongoDB 连接 - 添加更多调试
 const mongoUri = process.env.MONGODB_URI || 
                  process.env.MONGO_URL || 
                  process.env.DATABASE_URL ||
-                 'mongodb://localhost:27017/todoapp';
+                 'mongodb://mongo:27017/todoapp';  // 使用 'mongo' 作为主机名
 
-// 调试输出 ✅ (已经有了)
-console.log('🔍 环境变量 MONGODB_URI:', process.env.MONGODB_URI ? '已设置' : '未设置');
-console.log('🔍 环境变量 MONGO_URL:', process.env.MONGO_URL ? '已设置' : '未设置');
-console.log('🔍 使用的连接字符串:', mongoUri.replace(/\/\/([^:]+):([^@]+)@/, '//$1:****@'));
+console.log('🔍 正在连接到 MongoDB...');
+console.log('🔍 连接字符串:', mongoUri.replace(/\/\/([^:]+):([^@]+)@/, '//$1:****@'));
 
-// MongoDB连接 ✅ (代码正确)
 mongoose.connect(mongoUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 5000,
+    serverSelectionTimeoutMS: 10000,  // 增加超时时间
+    socketTimeoutMS: 45000,
 }).then(() => {
     console.log('✅ MongoDB连接成功！');
     console.log('📊 数据库名称:', mongoose.connection.name);
 }).catch((err) => {
     console.error('❌ MongoDB连接失败:', err.message);
+    console.error('详细错误:', err);
+    // 继续运行服务器，即使数据库连接失败
 });
 
-// Todo 模型定义 ✅ (代码正确)
-const TodoSchema = new mongoose.Schema({
-    text: {
-        type: String,
-        required: true
-    },
-    completed: {
-        type: Boolean,
-        default: false
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    }
+// ... 其余代码保持不变 ...
+
+// 启动服务器 - 重要更新！
+const PORT = process.env.PORT || 8080;
+const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 服务器运行在端口 ${PORT}`);
+    console.log(`✅ 服务器启动成功！`);
 });
 
-const Todo = mongoose.model('Todo', TodoSchema);
-
-// API 路由
-// 获取所有待办事项 ✅
-app.get('/api/todos', async (req, res) => {
-    try {
-        const todos = await Todo.find().sort({ createdAt: -1 });
-        res.json(todos);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// 创建新的待办事项 👈 更新这个部分
-app.post('/api/todos', async (req, res) => {
-    try {
-        // 添加调试日志
-        console.log('📥 收到 POST 请求');
-        console.log('📦 请求体:', req.body);
-        console.log('📋 Content-Type:', req.headers['content-type']);
-        
-        // 验证输入
-        if (!req.body.text || req.body.text.trim() === '') {
-            console.log('❌ 文本为空');
-            return res.status(400).json({ 
-                error: '待办事项内容不能为空' 
-            });
-        }
-        
-        const todo = new Todo({
-            text: req.body.text.trim()
+// 优雅关闭
+process.on('SIGTERM', () => {
+    console.log('收到 SIGTERM 信号，正在关闭服务器...');
+    server.close(() => {
+        console.log('服务器已关闭');
+        mongoose.connection.close(false, () => {
+            console.log('MongoDB 连接已关闭');
+            process.exit(0);
         });
-        
-        const savedTodo = await todo.save();
-        console.log('✅ 保存成功:', savedTodo);
-        
-        res.status(201).json(savedTodo);
-    } catch (error) {
-        console.error('❌ 保存失败:', error);
-        res.status(400).json({ error: error.message });
-    }
+    });
 });
-
-// 其余代码保持不变...
